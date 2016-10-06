@@ -510,7 +510,7 @@ gsub_comp([], _P, _RE, _Bef, _Rep) -> no.
 
 %% split(String, RegExp) -> {ok,[SubString]} | {error,E}.
 %%  Split a string into substrings where the RegExp describes the
-%%  field seperator. The RegExp " " is specially treated.
+%%  field separator. The RegExp " " is specially treated.
 
 split(String, " ") ->				%This is really special
     {ok,{regexp,RE}} = parse("[ \t]+"),
@@ -1154,7 +1154,7 @@ comp_crs([], Last) -> [{Last,maxchar}].
 %% build_dfa(NFA, NfaStartState) -> {DFA,DfaStartState}.
 %%  Build a DFA from an NFA using "subset construction". The major
 %%  difference from the book is that we keep the marked and unmarked
-%%  DFA states in seperate lists. New DFA states are added to the
+%%  DFA states in separate lists. New DFA states are added to the
 %%  unmarked list and states are marked by moving them to the marked
 %%  list. We assume that the NFA accepting state numbers are in
 %%  ascending order for the rules and use ordsets to keep this order.

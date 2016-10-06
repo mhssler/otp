@@ -64,7 +64,7 @@ value_option(Flag, Default, On, OnVal, Off, OffVal, Opts) ->
 -define(MAX_ARGUMENTS, 255).
 
 %% The error and warning info structures, {Line,Module,Descriptor},
-%% are kept in their seperate fields in the lint state record together
+%% are kept in their separate fields in the lint state record together
 %% with the name of the file (when a new file is entered, marked by
 %% the 'file' attribute, then the field 'file' of the lint record is
 %% set). At the end of the run these lists are packed into a list of

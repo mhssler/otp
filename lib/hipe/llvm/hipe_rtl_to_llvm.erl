@@ -1426,9 +1426,9 @@ relocs_to_list(Relocs) ->
 %%         constants/labels.
 handle_relocations(Relocs, Data, Fun) ->
   RelocsList = relocs_to_list(Relocs),
-  %% Seperate Relocations according to their type
+  %% Separate Relocations according to their type
   {CallList, AtomList, ClosureList, ClosureLabels, SwitchList} =
-    seperate_relocs(RelocsList),
+    separate_relocs(RelocsList),
   %% Create code to declare atoms
   AtomDecl = [declare_atom(A) || A <- AtomList],
   %% Create code to create local name for atoms
@@ -1469,28 +1469,28 @@ handle_relocations(Relocs, Data, Fun) ->
   LocalVariables = AtomLoad ++ ClosureLoad ++ ConstLoad,
   {Relocs4, ExternalDeclarations, LocalVariables}.
 
-%% @doc Seperate relocations according to their type.
-seperate_relocs(Relocs) ->
-  seperate_relocs(Relocs, [], [], [], [], []).
+%% @doc Separate relocations according to their type.
+separate_relocs(Relocs) ->
+  separate_relocs(Relocs, [], [], [], [], []).
 
-seperate_relocs([], CallAcc, AtomAcc, ClosureAcc, LabelAcc, JmpTableAcc) ->
+separate_relocs([], CallAcc, AtomAcc, ClosureAcc, LabelAcc, JmpTableAcc) ->
   {CallAcc, AtomAcc, ClosureAcc, LabelAcc, JmpTableAcc};
-seperate_relocs([R|Rs], CallAcc, AtomAcc, ClosureAcc, LabelAcc, JmpTableAcc) ->
+separate_relocs([R|Rs], CallAcc, AtomAcc, ClosureAcc, LabelAcc, JmpTableAcc) ->
   case R of
     {_, {call, _}} ->
-      seperate_relocs(Rs, [R | CallAcc], AtomAcc, ClosureAcc, LabelAcc,
+      separate_relocs(Rs, [R | CallAcc], AtomAcc, ClosureAcc, LabelAcc,
                       JmpTableAcc);
     {_, {atom, _}} ->
-      seperate_relocs(Rs, CallAcc, [R | AtomAcc], ClosureAcc, LabelAcc,
+      separate_relocs(Rs, CallAcc, [R | AtomAcc], ClosureAcc, LabelAcc,
                       JmpTableAcc);
     {_, {closure, _}} ->
-      seperate_relocs(Rs, CallAcc, AtomAcc, [R | ClosureAcc], LabelAcc,
+      separate_relocs(Rs, CallAcc, AtomAcc, [R | ClosureAcc], LabelAcc,
                       JmpTableAcc);
     {_, {switch, _, _}} ->
-      seperate_relocs(Rs, CallAcc, AtomAcc, ClosureAcc, LabelAcc,
+      separate_relocs(Rs, CallAcc, AtomAcc, ClosureAcc, LabelAcc,
                       [R | JmpTableAcc]);
     {_, {closure_label, _, _}} ->
-      seperate_relocs(Rs, CallAcc, AtomAcc, ClosureAcc, [R | LabelAcc],
+      separate_relocs(Rs, CallAcc, AtomAcc, ClosureAcc, [R | LabelAcc],
                       JmpTableAcc)
   end.
 

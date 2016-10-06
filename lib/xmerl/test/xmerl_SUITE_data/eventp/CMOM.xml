@@ -16546,7 +16546,7 @@ Note! When setting this attribute from true to false the system creates a new CV
             </dataType>
         </attribute>
         <attribute name="logonServerAddress">
-            <description>A list of node names or IP addresses of the single logon servers (SLSs). The list uses commas to seperate the single logon server addresses, e.g. "https://SLS1,https://SLS2,https://SLS3", these addresses consists of the URLs to the concerned SLS servers. The attribute is read by Element Management application to find the single logon server in the network.</description>
+            <description>A list of node names or IP addresses of the single logon servers (SLSs). The list uses commas to separate the single logon server addresses, e.g. "https://SLS1,https://SLS2,https://SLS3", these addresses consists of the URLs to the concerned SLS servers. The attribute is read by Element Management application to find the single logon server in the network.</description>
             <dataType>
                 <string>
                     <defaultValue>""</defaultValue>

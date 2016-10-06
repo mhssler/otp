@@ -28,7 +28,7 @@
 %% expand(CurrentBefore) ->
 %%	{yes, Expansion, Matches} | {no, Matches}
 %%  Try to expand the word before as either a module name or a function
-%%  name. We can handle white space around the seperating ':' but the
+%%  name. We can handle white space around the separating ':' but the
 %%  function name must be on the same line. CurrentBefore is reversed
 %%  and over_word/3 reverses the characters it finds. In certain cases
 %%  possible expansions are printed.
