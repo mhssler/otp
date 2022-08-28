@@ -86,6 +86,7 @@
 // EVP_sha3_384
 // EVP_sha3_512
 // EVP_sha512
+// EVP_sha512_256
 // OpenSSL_version
 // OpenSSL_version_num
 // PEM_read_PrivateKey

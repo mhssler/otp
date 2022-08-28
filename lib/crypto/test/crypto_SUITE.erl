@@ -250,6 +250,7 @@ groups() ->
                      {group, sha3_384},
                      {group, sha3_512},
                      {group, sha512},
+                     {group, sha512_256},
                      {group, sha},
 
                      {group, dh},
@@ -316,6 +317,7 @@ groups() ->
                  {group, sha256},
                  {group, sha384},
                  {group, sha512},
+                 {group, sha512_256},
 
                  {group, dh},
                  {group, ecdh},
@@ -371,6 +373,7 @@ groups() ->
      {sha256,               [], [hash, hmac, hmac_update]},
      {sha384,               [], [hash, hmac, hmac_update]},
      {sha512,               [], [hash, hmac, hmac_update]},
+     {sha512_256,           [], [hash]},
      {sha3_224,             [], [hash, hmac, hmac_update]},
      {sha3_256,             [], [hash, hmac, hmac_update]},
      {sha3_384,             [], [hash, hmac, hmac_update]},
@@ -2152,6 +2155,10 @@ group_config(sha512 = Type, Config) ->
     Msgs =  [rfc_4634_test1(), rfc_4634_test2(), long_msg()],
     Digests = rfc_4634_sha512_digests() ++ [long_sha512_digest()],
     [{hash, {Type, Msgs, Digests}} | Config];
+group_config(sha512_256 = Type, Config) ->
+    Msgs =  [rfc_4634_test1(), rfc_4634_test2(), long_msg()],
+    Digests = nist_sha512_256_digests() ++ [long_sha512_256_digest()],
+    [{hash, {Type, Msgs, Digests}} | Config];
 group_config(sha3_224 = Type, Config) ->
     {Msgs,Digests} = sha3_test_vectors(Type),
     [{hash, {Type, Msgs, Digests}} | Config];
@@ -2235,7 +2242,7 @@ group_config(ecdsa = Type, Config) ->
     {Private, Public} = ec_key_named(),
     Msg = ec_msg(),
     SupportedHashs = proplists:get_value(hashs, crypto:supports(), []),
-    DssHashs = [sha, sha224, sha256, sha384, sha512],
+    DssHashs = [sha, sha224, sha256, sha384, sha512, sha512_256],
     SignVerify = [{Type, Hash, Public, Private, Msg} 
                   || Hash <- DssHashs,
                      lists:member(Hash, SupportedHashs)],
@@ -2315,6 +2322,11 @@ do_configure_mac(hmac, Type, _Config) ->
             Data = rfc_4231_msgs() ++ [long_msg()],
             Hmac = rfc4231_hmac_sha512() ++ [long_hmac(sha512)],
             zip3_special(hmac, Type, Keys, Data, Hmac);
+        sha512_256 ->
+            Keys = rfc_4231_keys(),
+            Data = rfc_4231_msgs() ++ [long_msg()],
+            Hmac = rfc4231_hmac_sha512_256() ++ [long_hmac(sha512_256)],
+            zip3_special(hmac, Type, Keys, Data, Hmac);
         sha3_224 ->
             hmac_sha3(Type);
         sha3_256 ->
@@ -2372,7 +2384,7 @@ rsa_sign_verify_tests(Config, Msg, Public, Private, PublicS, PrivateS, OptsToTry
 rsa_sign_verify_tests(Msg, Public, Private, PublicS, PrivateS, OptsToTry) ->
     gen_rsa_sign_verify_tests([md5, ripemd160, sha, sha224, sha256], Msg, Public, Private,
                               [undefined | OptsToTry]) ++
-	gen_rsa_sign_verify_tests([sha384, sha512], Msg, PublicS, PrivateS,
+	gen_rsa_sign_verify_tests([sha384, sha512, sha512_256], Msg, PublicS, PrivateS,
                                   [undefined | OptsToTry]).
 
 gen_rsa_sign_verify_tests(Hashs, Msg, Public, Private, Opts) ->
@@ -2386,7 +2398,8 @@ gen_rsa_sign_verify_tests(Hashs, Msg, Public, Private, Opts) ->
 		    ([{rsa_padding, rsa_x931_padding} | _], Acc1)
 			    when Hash =:= md5
 			    orelse Hash =:= ripemd160
-			    orelse Hash =:= sha224 ->
+                            orelse Hash =:= sha224
+                            orelse Hash =:= sha512_256 ->
 			Acc1;
 		    (Opt, Acc1) ->
                         case rsa_opt_is_supported(Opt, SupOpts) of
@@ -2699,6 +2712,11 @@ rfc_4634_sha512_digests() ->
 		"0A9EEEE64B55D39A2192992A274FC1A836BA3C23A3FEEBBD"
 		"454D4423643CE80E2A9AC94FA54CA49F"),
      hexstr2bin("8E959B75DAE313DA8CF4F72814FC143F8F7779C6EB9F7FA17299AEADB6889018501D289E4900F7E4331B99DEC4B5433AC7D329EEB6DD26545E96E55B874BE909")].
+nist_sha512_256_digests() ->
+    [hexstr2bin("53048E2681941EF99B2E29B76B4C7DAB"
+                "E4C2D0C634FC6D46E0E2F13107E7AF23"),
+     hexstr2bin("3928E184FB8690F840DA3988121D31BE"
+                "65CB9D3EF83EE6146FEAC861E19B563A")].
 
 long_msg() ->
     fun() -> lists:duplicate(1000000, $a) end.
@@ -2725,6 +2743,10 @@ long_sha384_digest() ->
 long_sha512_digest() ->
     hexstr2bin("e718483d0ce76964" "4e2e42c7bc15b463" "8e1f98b13b204428" "5632a803afa973eb"
 	       "de0ff244877ea60a" "4cb0432ce577c31b" "eb009c5c2c49aa2e" "4eadb217ad8cc09b").
+
+long_sha512_256_digest() ->
+    %% FIXME: How do I calculate it outside of Erlang?"
+    hexstr2bin("9a59a052" "930187a9" "7038cae6" "92f30708" "aa649192" "3ef51943" "94dc68d5" "6c74fb21").
 
 ripemd160_msgs() ->
     [<<"">>,
@@ -2948,6 +2970,25 @@ rfc4231_hmac_sha512() ->
 		"debd71f8867289865df5a32d20cdc944"
 		"b6022cac3c4982b10d5eeb55c3e4de15"
 		"134676fb6de0446065c97440fa8c6a58")].
+rfc4231_hmac_sha512_256() ->
+    [hexstr2bin("9f9126c3d9c3c330d760425ca8a217e3"
+                "1feae31bfe70196ff81642b868402eab"),
+     hexstr2bin("6df7b24630d5ccb2ee335407081a8718"
+                "8c221489768fa2020513b2d593359456"),
+     hexstr2bin("229006391d66c8ecddf43ba5cf8f8353"
+                "0ef221a4e9401840d1bead5137c8a2ea"),
+     hexstr2bin("36d60c8aa1d0be856e10804cf836e821"
+                "e8733cbafeae87630589fd0b9b0a2f4c"),
+     hexstr2bin("415fad6271580a531d4179bc891d87a6"),
+     hexstr2bin("80b24263c7c1a3ebb71493c1dd7be8b4"
+                "9b46d1f41b4aeec1121b013783f8f352"
+                "6b56d037e05f2598bd0fd2215d6a1e52"
+                "95e64f73f63f0aec8b915a985d786598"),
+     hexstr2bin("e37b6a775dc87dbaa4dfa9f96e5e3ffd"
+                "debd71f8867289865df5a32d20cdc944"
+                "b6022cac3c4982b10d5eeb55c3e4de15"
+                "134676fb6de0446065c97440fa8c6a58")].
+
 des_cbc(_) ->
     [{des_cbc, 
      hexstr2bin("0123456789abcdef"), 

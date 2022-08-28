@@ -293,6 +293,12 @@ ERL_NIF_TERM hash_init_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
         ctx_init = (init_fun)(&SHA512_Init);
         break;
 #endif
+#ifdef HAVE_SHA512_256
+    case NID_sha512_256:
+        ctx_size = sizeof(SHA512_CTX);
+        ctx_init = (init_fun)(&sha512_256_Init);
+        break;
+#endif
     default:
         return EXCP_NOTSUP_N(env, 0, "Unsupported digest type");
     }
@@ -382,6 +388,12 @@ ERL_NIF_TERM hash_update_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]
     case NID_sha512:
         ctx_size   = sizeof(SHA512_CTX);
         ctx_update = (update_fun)(&SHA512_Update);
+        break;
+#endif
+#ifdef HAVE_SHA512_256
+    case NID_sha512_256:
+        ctx_size   = sizeof(SHA512_CTX);
+        ctx_update = (update_fun)(&sha512_256_Update);
         break;
 #endif
     default:
@@ -479,6 +491,12 @@ ERL_NIF_TERM hash_final_nif(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[])
     case NID_sha512:
         ctx_size  = sizeof(SHA512_CTX);
         ctx_final = (final_fun)(&SHA512_Final);
+        break;
+#endif
+#ifdef HAVE_SHA512_256
+    case NID_sha512_256:
+        ctx_size  = sizeof(SHA512_CTX);
+        ctx_final = (final_fun)(&sha512_256_Final);
         break;
 #endif
     default:

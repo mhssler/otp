@@ -171,6 +171,10 @@
     && !defined(OPENSSL_NO_SHA512) && defined(NID_sha512)
 # define HAVE_SHA512
 #endif
+#if OPENSSL_VERSION_NUMBER >= PACKED_OPENSSL_VERSION_PLAIN(1,1,1)	\
+    && defined(NID_sha512_256)
+# define HAVE_SHA512_256
+#endif
 
 // SHA3:
 #if OPENSSL_VERSION_NUMBER >= PACKED_OPENSSL_VERSION_PLAIN(1,1,1)
