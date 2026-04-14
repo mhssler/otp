@@ -295,3 +295,8 @@ BIF_RETTYPE math_fmod_2(BIF_ALIST_2)
 {
     return math_call_2(BIF_P, fmod, BIF_ARG_1, BIF_ARG_2);
 }
+
+BIF_RETTYPE math_hypot_2(BIF_ALIST_2)
+{
+    return math_call_2(BIF_P, hypot, BIF_ARG_1, BIF_ARG_2);
+}

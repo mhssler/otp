@@ -34,7 +34,7 @@ This module provides an interface to a number of mathematical functions.
          cosh/1, tanh/1, asinh/1, acosh/1, atanh/1, exp/1, log/1,
          log2/1, log10/1, pow/2, sqrt/1, erf/1, erfc/1,
          ceil/1, floor/1,
-         fmod/2]).
+         fmod/2, hypot/2]).
 
 -doc """
 Returns the arc cosine of `X` in radians.
@@ -279,6 +279,26 @@ Returns the floating point remainder `X` divided by `Y`.
 -spec fmod(X, Y) -> float() when
       X :: number(), Y :: number().
 fmod(_, _) ->
+    erlang:nif_error(undef).
+
+-doc """
+Returns `sqrt(X*X + Y*Y)`, computed in a way that avoids undue overflow or
+underflow for large or small arguments.
+
+## Examples
+
+```erlang
+1> math:hypot(3, 4).
+5.0
+2> math:hypot(0.0, 0.0).
+0.0
+```
+""".
+-doc(#{since => <<"OTP 29.0">>}).
+-spec hypot(X, Y) -> float() when
+      X :: number(),
+      Y :: number().
+hypot(_, _) ->
     erlang:nif_error(undef).
 
 -doc """

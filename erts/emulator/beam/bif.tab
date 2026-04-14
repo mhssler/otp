@@ -248,6 +248,7 @@ bif math:log10/1
 bif math:sqrt/1
 bif math:atan2/2
 bif math:pow/2
+bif math:hypot/2
 
 bif erlang:start_timer/3
 bif erlang:start_timer/4
