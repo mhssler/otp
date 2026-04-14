@@ -3545,16 +3545,12 @@ commands."
 ;; subroutines in more complex commands.   /andersl
 
 (defun erlang-string-start ()
-  "If inside a string (or comment), move to the beginning of the string"
-
-  ;; This is not perfect because of erlang.el handling of multiline strings but better than before
+  "If inside a string (or comment), move to the beginning of the string."
   (beginning-of-line)
   (let ((string-start-pos (nth 8 (syntax-ppss))))
     (while string-start-pos
       (goto-char string-start-pos)
-      (beginning-of-line)  ;; Hack to handle "" inside """  """
-      (setq string-start-pos (nth 8 (syntax-ppss)))
-      )))
+      (setq string-start-pos (nth 8 (syntax-ppss))))))
 
 (defun erlang-beginning-of-clause (&optional arg)
   "Move backward to previous start of clause.

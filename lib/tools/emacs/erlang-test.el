@@ -329,6 +329,24 @@ This lets the body contain sequences of up to three `\"' characters."
     (should-not (erlang-test--in-string-p "foo"))
     (should-not (erlang-test--in-string-p "bar"))))
 
+(ert-deftest erlang-test-string-start-triple-quoted ()
+  "`erlang-string-start' escapes a triple-quoted string body."
+  (with-temp-buffer
+    (erlang-mode)
+    (insert "foo() ->\n"
+            "    X = \"\"\"\n"
+            "        body with \"embedded\" quotes\n"
+            "        \"\"\",\n"
+            "    X.\n")
+    (font-lock-ensure)
+    (goto-char (point-min))
+    (search-forward "embedded")
+    (should (nth 3 (syntax-ppss)))
+    (erlang-string-start)
+    ;; After escaping the string we must end up outside it, at or before
+    ;; the opening `"""' delimiter.
+    (should-not (nth 3 (syntax-ppss)))))
+
 
 (provide 'erlang-test)
 
