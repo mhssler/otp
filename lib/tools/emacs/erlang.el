@@ -1727,25 +1727,62 @@ Other commands:
              ;; And the dollar sign in $\" or $\' escapes two
              ;; characters, not just one.
              ("\\(\\$\\)\\\\[\"']" 1 "'")
-             ;; To highlight triple-or-more quoted strings decently:
-             ;; mark the second to last character in a sequence
-             ;; containing an even number of " characters
-             ;; as an expression prefix character.
-             ;; This makes an opening even number of (4 or above)
-             ;; " characters one or more empty strings
-             ;; followed by one prefixed single opening ",
-             ;; so effectively just a single ".
-             ;; A closing even number of " becomes a single closing "
-             ;; followed by zero or more empty strings,
-             ;; and then one string containing just a prefix ".
-             ;; An odd number of opening or closing " works without
-             ;; any tricks since they become empty strings and
-             ;; an opening or closing single " last or first.
-             ;; " chars within a triple-or-more quoted string really
-             ;; does not work, but a single "-quoted string on one line
-             ;; only looses the string highlighting.
-             ("\\(?:\"\"\\)+\\(\"?\\)\"" 1 "'")
+             ;; Triple-or-more quoted strings (EEP 64, OTP 27+).  Any
+             ;; sequence of 3 or more `"' characters opens or closes a
+             ;; triple-quoted string.  `erlang-syntax-propertize-triple-quote'
+             ;; uses `syntax-ppss' to decide whether the matched sequence
+             ;; opens or closes the string and marks a single `"' character
+             ;; with the generic string fence syntax class (\"|\").
+             ;; Since a `"' character inside a fence-delimited string has
+             ;; no special meaning, embedded `"' characters in the string
+             ;; body are then handled correctly.
+             ("\"\\{3,\\}"
+              (0 (ignore (erlang-syntax-propertize-triple-quote))))
              )))))
+
+(defun erlang-syntax-propertize-triple-quote ()
+  "Put fence syntax on a triple-or-more quoted string delimiter.
+Called from `font-lock-syntactic-keywords' after a sequence of
+three or more `\"' characters has been matched.
+
+Erlang EEP 64 triple-quoted strings use any run of three or more
+double quote characters as an opening delimiter; the closing
+delimiter must contain the same number of double quotes.  The
+characters preceding and following the opening fence within the
+delimiter run are just that many literal `\"' characters in the
+string body."
+  (let* ((start (match-beginning 0))
+         (end (match-end 0))
+         ;; `syntax-ppss' moves point when given an explicit position,
+         ;; which would reset the font-lock search to the start of the
+         ;; current match and loop forever.  Guard with `save-excursion'.
+         (ppss (save-excursion (syntax-ppss start))))
+    (cond
+     ;; Do nothing if the match is inside a comment.
+     ((nth 4 ppss))
+     ;; Inside a fence-delimited string: the match is a potential
+     ;; closing delimiter.  Only close when the match has the same
+     ;; number of `"' characters as the opening delimiter.
+     ((eq t (nth 3 ppss))
+      (when (= (- end start)
+               (erlang-syntax-triple-quote-opening-length (nth 8 ppss)))
+        (put-text-property (1- end) end
+                           'syntax-table (string-to-syntax "|"))))
+     ;; Not inside any string: the match is an opening delimiter.
+     ;; Mark the third `"' as a string fence.  The first two `"'
+     ;; characters form an empty regular string; the fence then
+     ;; opens the triple-quoted string body.
+     ((null (nth 3 ppss))
+      (put-text-property (+ start 2) (+ start 3)
+                         'syntax-table (string-to-syntax "|"))))))
+
+(defun erlang-syntax-triple-quote-opening-length (fence-pos)
+  "Return the number of `\"' characters in the delimiter run at FENCE-POS.
+FENCE-POS points at a `\"' character inside the run."
+  (save-excursion
+    (goto-char fence-pos)
+    (- (save-excursion (skip-chars-forward "\""))
+       (skip-chars-backward "\""))))
 
 
 

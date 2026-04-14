@@ -253,6 +253,83 @@ concatenated to form an erlang file to test on.")
     (funcall dotest)))
 
 
+(defun erlang-test--in-string-p (needle)
+  "Return non-nil if NEEDLE in the current buffer is inside a string."
+  (save-excursion
+    (goto-char (point-min))
+    (search-forward needle)
+    (goto-char (match-beginning 0))
+    (nth 3 (syntax-ppss))))
+
+(ert-deftest erlang-test-triple-quoted-string ()
+  "Font-lock of triple-quoted strings containing double quotes.
+See https://github.com/erlang/otp/issues/10096."
+  (with-temp-buffer
+    (erlang-mode)
+    (insert "-doc \"\"\"\n"
+            "Some Text with \"double quotes\" and just a single one \".\n"
+            "\"\"\".\n"
+            "-spec foo() -> bar.\n"
+            "foo() ->\n"
+            "    ok.\n")
+    (font-lock-ensure)
+    ;; Everything between the opening and closing """ is the docstring,
+    ;; regardless of embedded " characters.
+    (should (erlang-test--in-string-p "Some Text"))
+    (should (erlang-test--in-string-p "double quotes"))
+    (should (erlang-test--in-string-p "just a single"))
+    ;; After the closing """, we are back in code.
+    (should-not (erlang-test--in-string-p "-spec"))
+    (should-not (erlang-test--in-string-p "foo()"))
+    (should-not (erlang-test--in-string-p "    ok"))))
+
+(ert-deftest erlang-test-triple-quoted-string-four-quotes ()
+  "A four-quote triple-quoted string is also delimited correctly.
+This lets the body contain sequences of up to three `\"' characters."
+  (with-temp-buffer
+    (erlang-mode)
+    (insert "-doc \"\"\"\"\n"
+            "embedded \"\"\" three in a row\n"
+            "\"\"\"\".\n"
+            "bar() -> ok.\n")
+    (font-lock-ensure)
+    (should (erlang-test--in-string-p "embedded"))
+    (should (erlang-test--in-string-p "three in a row"))
+    (should-not (erlang-test--in-string-p "bar"))))
+
+(ert-deftest erlang-test-regular-string-still-works ()
+  "Ordinary double-quoted strings are still recognised as strings."
+  (with-temp-buffer
+    (erlang-mode)
+    (insert "foo() -> \"plain string\", 42.\n")
+    (font-lock-ensure)
+    (should (erlang-test--in-string-p "plain string"))
+    (should-not (erlang-test--in-string-p "42"))))
+
+(ert-deftest erlang-test-triple-quote-inside-comment ()
+  "A `\"\"\"' sequence inside a line comment is not a delimiter."
+  (with-temp-buffer
+    (erlang-mode)
+    (insert "foo() -> ok. %% see \"\"\" above\n"
+            "bar() -> ok.\n")
+    (font-lock-ensure)
+    (should-not (erlang-test--in-string-p "bar"))))
+
+(ert-deftest erlang-test-multiple-triple-quoted-strings ()
+  "Two triple-quoted strings in a row are delimited independently."
+  (with-temp-buffer
+    (erlang-mode)
+    (insert "-doc \"\"\"\nfirst\n\"\"\".\n"
+            "foo() -> ok.\n"
+            "-doc \"\"\"\nsecond\n\"\"\".\n"
+            "bar() -> ok.\n")
+    (font-lock-ensure)
+    (should (erlang-test--in-string-p "first"))
+    (should (erlang-test--in-string-p "second"))
+    (should-not (erlang-test--in-string-p "foo"))
+    (should-not (erlang-test--in-string-p "bar"))))
+
+
 (provide 'erlang-test)
 
 ;;; erlang-test.el ends here
