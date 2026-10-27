@@ -23,8 +23,6 @@
 -module(httpc_response).
 -moduledoc false.
 
--compile([{nowarn_possibly_unsafe_function, {erlang, list_to_atom, 1}}]).
-
 -include_lib("inets/src/http_lib/http_internal.hrl").
 -include("httpc_internal.hrl").
 
@@ -421,9 +419,13 @@ redirect(Response = {_, Headers, _}, Request) ->
             transparent(Response, Request);
         RedirUrl ->
             Brackets = Request#request.ipv6_host_with_brackets,
-            case uri_string:parse(RedirUrl) of
+            case parse_redirect_url(RedirUrl) of
                 {error, Reason, _} ->
                     {ok, error(Request, Reason), Data};
+                unsupported_scheme ->
+                    transparent(Response, Request);
+                missing_host ->
+                    transparent(Response, Request);
                 %% Automatic redirection
                 URI ->
                     {Host, Port0} = Request#request.address,
@@ -432,7 +434,7 @@ redirect(Response = {_, Headers, _}, Request) ->
                     Scheme = atom_to_list(Request#request.scheme),
                     Query = Request#request.pquery,
                     URIMap = resolve_uri(Scheme, Host, Port, Path, Query, URI),
-                    TScheme = list_to_atom(maps:get(scheme, URIMap)),
+                    TScheme = scheme_to_atom(maps:get(scheme, URIMap)),
                     THost = http_util:maybe_add_brackets(maps:get(host, URIMap), Brackets),
                     TPort = maps:get(port, URIMap),
                     TPath = maps:get(path, URIMap),
@@ -490,6 +492,40 @@ redirect(Response = {_, Headers, _}, Request) ->
                     {redirect, NewRequest, Data}
             end
     end.
+
+%% RFC3986 - 3.1. Schemes are case-insensitive. Only http and https
+%% redirects with a host are followed; otherwise the 3xx response is
+%% returned to the caller.
+parse_redirect_url(RedirUrl) ->
+    case uri_string:parse(RedirUrl) of
+        #{scheme := Scheme0} = URI ->
+            case string:lowercase(Scheme0) of
+                Scheme when Scheme =:= "http"; Scheme =:= "https" ->
+                    check_redirect_host(URI#{scheme := Scheme});
+                _ ->
+                    unsupported_scheme
+            end;
+        #{} = URI ->
+            check_redirect_host(URI);
+        Error ->
+            Error
+    end.
+
+%% RFC9110 - 4.2.1. An http(s) URI with an empty host is invalid. A
+%% relative reference without an authority keeps the request's host.
+check_redirect_host(#{host := ""}) ->
+    missing_host;
+check_redirect_host(#{host := _} = URI) ->
+    URI;
+check_redirect_host(#{scheme := _}) ->
+    missing_host;
+check_redirect_host(URI) ->
+    URI.
+
+scheme_to_atom("http") ->
+    http;
+scheme_to_atom("https") ->
+    https.
 
 add_question_mark(<<>>) ->
     <<>>;

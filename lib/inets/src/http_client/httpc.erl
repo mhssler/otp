@@ -294,7 +294,8 @@ HTTP options:
   the new URI and returns that as the result, instead of a 30X-result code.
 
   For some 30X-result codes, automatic redirect is not allowed. In these cases
-  the 30X-result is always returned.
+  the 30X-result is always returned. The same applies to a redirect to a URI
+  with a scheme other than `http` or `https`, or has no host.
 
   Default is `true`.
 

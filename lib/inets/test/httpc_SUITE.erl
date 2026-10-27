@@ -200,6 +200,9 @@ only_simulated() ->
      redirect_relative_uri,
      redirect_strips_sensitive_headers,
      redirect_strips_userinfo_credentials,
+     redirect_uppercase_scheme,
+     redirect_unsupported_scheme,
+     redirect_missing_host,
      port_in_host_header,
      redirect_port_in_host_header,
      te_header_undefined_no_connection,
@@ -1032,6 +1035,72 @@ redirect_strips_userinfo_credentials(Config) when is_list(Config) ->
         httpc:request(get, {OriginUrl, RedirectHeaders}, [?SSL_NO_VERIFY], RequestOpts, Profile),
 
     ?assertEqual("false", proplists:get_value("x-received-authorization", RespHeaders)).
+
+%%-------------------------------------------------------------------------
+redirect_uppercase_scheme() ->
+    [{doc, "An implementation should accept uppercase letters as equivalent to "
+      "lowercase in scheme names (RFC 3986 section 3.1)."}].
+redirect_uppercase_scheme(Config) when is_list(Config) ->
+    Group = group_name(Config),
+    Url301 = url(Group, "/301_custom_url.html", Config),
+    [Scheme, Rest] = string:split(url(Group, "/dummy.html", Config), ":"),
+    TargetUrl = string:uppercase(Scheme) ++ ":" ++ Rest,
+    RequestOpts = proplists:get_value(request_opts, Config, []),
+    Profile = ?profile(Config),
+    Headers = [{"x-test-301-url", TargetUrl}],
+
+    ?assertMatch({ok, {{_, 200, _}, [_ | _], [_ | _]}},
+                 httpc:request(get, {Url301, Headers}, [?SSL_NO_VERIFY],
+                               RequestOpts, Profile)).
+
+%%-------------------------------------------------------------------------
+redirect_unsupported_scheme() ->
+    [{doc, "A redirect to a scheme other than http or https is not followed "
+      "and the 3xx response is returned."}].
+redirect_unsupported_scheme(Config) when is_list(Config) ->
+    URL301 = url(group_name(Config), "/301_custom_url.html", Config),
+    RequestOpts = proplists:get_value(request_opts, Config, []),
+    Profile = ?profile(Config),
+    {ok, Host} = inet:gethostname(),
+    Request =
+        fun(TargetUrl) ->
+                Headers = [{"x-test-301-url", TargetUrl}],
+                httpc:request(get, {URL301, Headers}, [?SSL_NO_VERIFY],
+                              RequestOpts, Profile)
+        end,
+    TargetUrl1 = "ftp://" ++ Host ++ "/x",
+    TargetUrl2 = "FTP://" ++ Host ++ ":21/x",
+    TargetUrl3 = "file:///x",
+
+    {ok, {{_, 301, _}, RespHeaders1, _}} = Request(TargetUrl1),
+    ?assertEqual(TargetUrl1, proplists:get_value("location", RespHeaders1)),
+    {ok, {{_, 301, _}, RespHeaders2, _}} = Request(TargetUrl2),
+    ?assertEqual(TargetUrl2, proplists:get_value("location", RespHeaders2)),
+    {ok, {{_, 301, _}, RespHeaders3, _}} = Request(TargetUrl3),
+    ?assertEqual(TargetUrl3, proplists:get_value("location", RespHeaders3)).
+
+%%-------------------------------------------------------------------------
+redirect_missing_host() ->
+    [{doc, "A redirect to an http or https URI without a host (RFC 9110 "
+      "section 4.2.1) is not followed and the 3xx response is returned."}].
+redirect_missing_host(Config) when is_list(Config) ->
+    URL301 = url(group_name(Config), "/301_custom_url.html", Config),
+    RequestOpts = proplists:get_value(request_opts, Config, []),
+    Profile = ?profile(Config),
+    Request =
+        fun(TargetUrl) ->
+                Headers = [{"x-test-301-url", TargetUrl}],
+                httpc:request(get, {URL301, Headers}, [?SSL_NO_VERIFY],
+                              RequestOpts, Profile)
+        end,
+
+    lists:foreach(
+      fun(TargetUrl) ->
+              {ok, {{_, 301, _}, RespHeaders, _}} = Request(TargetUrl),
+              Location = proplists:get_value("location", RespHeaders),
+              ?assertEqual(TargetUrl, Location)
+      end,
+      ["http:foo", "HTTPS:/foo", "http:///x", "///x"]).
 
 %%-------------------------------------------------------------------------
 cookie() ->
