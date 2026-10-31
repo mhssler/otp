@@ -438,7 +438,7 @@ redirect(Response = {_, Headers, _}, Request) ->
                     THost = http_util:maybe_add_brackets(maps:get(host, URIMap), Brackets),
                     TPort = maps:get(port, URIMap),
                     TPath = maps:get(path, URIMap),
-                    TQuery = add_question_mark(maps:get(query, URIMap, "")),
+                    TQuery = add_question_mark(maps:get(query, URIMap, undefined)),
                     NewURI = uri_string:normalize(
                                uri_string:recompose(URIMap)),
                     HostPort = http_request:normalize_host(TScheme, THost, TPort),
@@ -527,9 +527,7 @@ scheme_to_atom("http") ->
 scheme_to_atom("https") ->
     https.
 
-add_question_mark(<<>>) ->
-    <<>>;
-add_question_mark([]) ->
+add_question_mark(undefined) ->
     [];
 add_question_mark(Comp) when is_binary(Comp) ->
     <<$?, Comp/binary>>;
@@ -597,15 +595,13 @@ maybe_add_query(Map, RelURI) ->
 
 
 resolve_path(Path, Query, RelURI, Map) ->
-    case maps:is_key(path, RelURI) of
-        true ->
-            Path1 = calculate_path(Path,  maps:get(path, RelURI)),
+    case maps:get(path, RelURI, "") of
+        RelP when RelP =:= ""; RelP =:= <<>> ->
+            resolve_query(Query, RelURI, Map#{path => Path});
+        RelP ->
             maybe_add_query(
-              Map#{path => Path1},
-              RelURI);
-        false ->
-            Map1 = Map#{path => Path},
-            resolve_query(Query, RelURI, Map1)
+              Map#{path => calculate_path(Path, RelP)},
+              RelURI)
     end.
 
 
@@ -649,9 +645,13 @@ resolve_query(Query, RelURI, Map) ->
         true ->
             Map#{query => maps:get(query, RelURI)};
         false ->
-            Map#{query => Query}
+            add_base_query(Query, Map)
     end.
 
+add_base_query([$?|Query], Map) ->
+    Map#{query => Query};
+add_base_query([], Map) ->
+    Map.
 
 maybe_to_integer(Port) when is_list(Port) ->
     {Port1, _} = string:to_integer(Port),

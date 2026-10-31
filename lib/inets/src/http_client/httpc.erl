@@ -1249,7 +1249,7 @@ handle_request(Method, Url,
             Port          = maps:get(port, URI, default_port(Scheme)),
             Host2         = http_request:normalize_host(Scheme, Host, Port),
             Path          = uri_string:recompose(#{path => maps:get(path, URI, "")}),
-            Query         = add_question_mark(maps:get(query, URI, "")),
+            Query         = add_question_mark(maps:get(query, URI, undefined)),
             HeadersRecord = header_record(NewHeaders, Host2, HTTPOptions),
 
 	    Request = #request{from          = Receiver,
@@ -1286,9 +1286,7 @@ handle_request(Method, Url,
     end.
 
 
-add_question_mark(<<>>) ->
-    <<>>;
-add_question_mark([]) ->
+add_question_mark(undefined) ->
     [];
 add_question_mark(Comp) when is_binary(Comp) ->
     <<$?, Comp/binary>>;
