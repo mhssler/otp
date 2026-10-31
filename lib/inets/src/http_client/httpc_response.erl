@@ -596,16 +596,16 @@ maybe_add_query(Map, RelURI) ->
          end.
 
 
+%% uri_string:parse/1 always returns a path, which is empty for
+%% references such as "" and "?page=2".
 resolve_path(Path, Query, RelURI, Map) ->
-    case maps:is_key(path, RelURI) of
-        true ->
-            Path1 = calculate_path(Path,  maps:get(path, RelURI)),
+    case maps:get(path, RelURI, "") of
+        RelP when RelP =:= ""; RelP =:= <<>> ->
+            resolve_query(Query, RelURI, Map#{path => Path});
+        RelP ->
             maybe_add_query(
-              Map#{path => Path1},
-              RelURI);
-        false ->
-            Map1 = Map#{path => Path},
-            resolve_query(Query, RelURI, Map1)
+              Map#{path => calculate_path(Path, RelP)},
+              RelURI)
     end.
 
 
@@ -649,8 +649,15 @@ resolve_query(Query, RelURI, Map) ->
         true ->
             Map#{query => maps:get(query, RelURI)};
         false ->
-            Map#{query => Query}
+            add_base_query(Query, Map)
     end.
+
+%% The base query is the pquery of the request, which starts with "?"
+%% unless it is empty.
+add_base_query([$?|Query], Map) ->
+    Map#{query => Query};
+add_base_query(_, Map) ->
+    Map.
 
 
 maybe_to_integer(Port) when is_list(Port) ->

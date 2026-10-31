@@ -203,6 +203,7 @@ only_simulated() ->
      redirect_uppercase_scheme,
      redirect_unsupported_scheme,
      redirect_missing_host,
+     redirect_empty_path_reference,
      port_in_host_header,
      redirect_port_in_host_header,
      te_header_undefined_no_connection,
@@ -1101,6 +1102,28 @@ redirect_missing_host(Config) when is_list(Config) ->
               ?assertEqual(TargetUrl, Location)
       end,
       ["http:foo", "HTTPS:/foo", "http:///x", "///x"]).
+
+%%-------------------------------------------------------------------------
+redirect_empty_path_reference() ->
+    [{doc, "A redirect to a relative reference with an empty path keeps the "
+      "path of the request, and also its query if the reference has none "
+      "(RFC 3986 section 5.2.2)."}].
+redirect_empty_path_reference(Config) when is_list(Config) ->
+    RequestOpts = proplists:get_value(request_opts, Config, []),
+    Profile = ?profile(Config),
+    Request =
+        fun(Path) ->
+                URL = url(group_name(Config), Path, Config),
+                {ok, {{_, 200, _}, Headers, _}} =
+                    httpc:request(post, {URL, [], "text/plain", "foobar"},
+                                  [?SSL_NO_VERIFY], RequestOpts, Profile),
+                proplists:get_value("x-request-uri", Headers)
+        end,
+
+    ?assertEqual("/empty_path_ref/a/same.html?q=1",
+                 Request("/empty_path_ref/a/same.html?q=1")),
+    ?assertEqual("/empty_path_ref/a/query.html?page=2",
+                 Request("/empty_path_ref/a/query.html?q=1")).
 
 %%-------------------------------------------------------------------------
 cookie() ->
@@ -3275,6 +3298,22 @@ handle_uri(_,"/301_custom_url.html",_,Headers,_,_) ->
 	"Location:" ++ NewUri ++  "\r\n" ++
 	"Content-Length:" ++ integer_to_list(length(Body))
 	++ "\r\n\r\n" ++ Body;
+
+%% Used by redirect_empty_path_reference. A POST is answered with a 303
+%% to a relative reference with an empty path, and the redirected GET
+%% gets its request target back in x-request-uri.
+handle_uri("POST","/empty_path_ref/a/same.html" ++ _,_,_,_,_) ->
+    "HTTP/1.1 303 See Other\r\n" ++
+        "Location:\r\n" ++
+        "Content-Length:0\r\n\r\n";
+handle_uri("POST","/empty_path_ref/a/query.html" ++ _,_,_,_,_) ->
+    "HTTP/1.1 303 See Other\r\n" ++
+        "Location:?page=2\r\n" ++
+        "Content-Length:0\r\n\r\n";
+handle_uri(_,"/empty_path_ref/" ++ _ = RelUri,_,_,_,_) ->
+    "HTTP/1.1 200 OK\r\n" ++
+        "X-Request-Uri:" ++ RelUri ++ "\r\n" ++
+        "Content-Length:0\r\n\r\n";
 
 handle_uri("HEAD","/302.html",Port,_,Socket,_) ->
     NewUri = url_start(Socket) ++
